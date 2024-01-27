@@ -4,7 +4,7 @@ const { JWT_KEY } = require("../config/serverConfig");
 const bcrypt = require("bcrypt");
 class UserService {
   constructor() {
-    this.UserRepository = new UserRepository();
+    this.userRepository = new UserRepository();
   }
 
   async create(data) {
@@ -20,7 +20,7 @@ class UserService {
   async signIn(email, plainPassword) {
     try {
       // fetch user
-      const user = await this.UserRepository.getbyEmail(email);
+      const user = await this.userRepository.getbyEmail(email);
       // compare
       const passMatch = this.checkPassword(plainPassword, user.password);
       if (!passMatch) {
@@ -41,6 +41,25 @@ class UserService {
     }
   }
 
+  async isAuthenticated(token) {
+    try {
+      const response = this.verifyToken(token);
+      if (!response) {
+        throw { error: "Invalid Token" };
+      }
+
+      const user = this.userRepository.getById(response.id);
+
+      if (!user) {
+        throw { error: "No user corresponsing to token exists" };
+      }
+
+      return user.id;
+    } catch (error) {
+      console.log("Somwthing went wrong in auth process");
+      throw error;
+    }
+  }
   createToken(user) {
     try {
       const result = jwt.sign(user, JWT_KEY, { expiresIn: "1h" });
@@ -51,7 +70,7 @@ class UserService {
     }
   }
 
-  verifyToken(user) {
+  verifyToken(token) {
     try {
       const response = jwt.verify(token, JWT_KEY);
       return response;
